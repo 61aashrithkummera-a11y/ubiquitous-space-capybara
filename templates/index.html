@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>KummeraAI</title>
+    <style>
+      body{font-family:Arial;padding:1rem}
+      #chat{white-space:pre-wrap;border:1px solid #ddd;padding:1rem;height:300px;overflow:auto}
+    </style>
+  </head>
+  <body>
+    <div id="chat"></div>
+    <input id="msg" style="width:70%"/>
+    <button id="send">Send</button>
+    <script>
+      async function sendMessage(m){
+        const res = await fetch("/chat", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({message: m})
+        });
+        return res.json();
+      }
+      document.getElementById("send").onclick = async () => {
+        const inp = document.getElementById("msg");
+        const txt = inp.value.trim();
+        if(!txt) return;
+        const chat = document.getElementById("chat");
+        chat.innerHTML += "\n\nUser: " + txt;
+        inp.value = "";
+        const j = await sendMessage(txt);
+        if (j.error) {
+          chat.innerHTML += "\n\nError: " + j.error;
+        } else {
+          chat.innerHTML += "\n\nKummeraAI: " + j.reply;
+        }
+        chat.scrollTop = chat.scrollHeight;
+      };
+    </script>
+  </body>
+</html>

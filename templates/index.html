@@ -1,41 +1,40 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8"/>
-    <title>KummeraAI</title>
-    <style>
-      body{font-family:Arial;padding:1rem}
-      #chat{white-space:pre-wrap;border:1px solid #ddd;padding:1rem;height:300px;overflow:auto}
-    </style>
-  </head>
-  <body>
-    <div id="chat"></div>
-    <input id="msg" style="width:70%"/>
-    <button id="send">Send</button>
-    <script>
-      async function sendMessage(m){
-        const res = await fetch("/chat", {
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({message: m})
-        });
-        return res.json();
-      }
-      document.getElementById("send").onclick = async () => {
-        const inp = document.getElementById("msg");
-        const txt = inp.value.trim();
-        if(!txt) return;
-        const chat = document.getElementById("chat");
-        chat.innerHTML += "\n\nUser: " + txt;
-        inp.value = "";
-        const j = await sendMessage(txt);
-        if (j.error) {
-          chat.innerHTML += "\n\nError: " + j.error;
-        } else {
-          chat.innerHTML += "\n\nKummeraAI: " + j.reply;
-        }
-        chat.scrollTop = chat.scrollHeight;
-      };
-    </script>
-  </body>
-</html>
+<head>
+  <meta charset="utf-8"/>
+  <title>KummeraAI</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <style>
+    :root{
+      --bg:#0f1720; --panel:#0b1220; --muted:#9aa6b2; --accent:#6ee7b7;
+      --user:#60a5fa; --assistant:#a78bfa; --radius:10px; --pad:14px;
+    }
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+    body{margin:0;background:linear-gradient(180deg,#071126 0%,var(--bg) 100%);color:#e6eef6;display:flex;align-items:center;justify-content:center;height:100vh;padding:20px}
+    .app{width:100%;max-width:880px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(2,6,23,0.7)}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    h1{font-size:20px;margin:0}
+    .controls{display:flex;gap:8px;align-items:center}
+    .toggle{background:#071124;border:1px solid rgba(255,255,255,0.03);color:var(--muted);padding:6px 10px;border-radius:8px;cursor:pointer}
+    main{display:flex;gap:16px}
+    .chat{flex:1;background:var(--panel);padding:12px;border-radius:12px;height:440px;overflow:auto;border:1px solid rgba(255,255,255,0.02)}
+    .composer{width:320px;display:flex;flex-direction:column;gap:10px}
+    .msg{padding:10px;border-radius:10px;margin:8px 0;max-width:86%;}
+    .user{background:linear-gradient(90deg, rgba(96,165,250,0.12), rgba(96,165,250,0.06));color:var(--user);margin-left:auto}
+    .assistant{background:linear-gradient(90deg, rgba(167,139,250,0.08), rgba(167,139,250,0.04));color:var(--assistant)}
+    #chat-empty{color:var(--muted);padding:8px}
+    .composer textarea{width:100%;height:120px;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit;resize:vertical}
+    .row{display:flex;gap:8px}
+    .btn{background:var(--accent);border:none;color:#052018;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+    .btn:disabled{opacity:.5;cursor:default}
+    .small{font-size:13px;color:var(--muted)}
+    .loading{font-style:italic;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="KummeraAI chat app">
+    <header>
+      <h1>KummeraAI</h1>
+      <div class="controls">
+        <

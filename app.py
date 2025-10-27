@@ -1,65 +1,37 @@
-from flask import Flask, request, jsonify, render_template
-import os, time, logging
+from flask import Flask, request, jsonify, render_template, Response
+from flask_cors import CORS
+import time
+import json
+import os
 
-app = Flask(__name__)
-logging.basicConfig(level=logging.INFO)
+app = Flask(__name__, template_folder="templates")
+CORS(app)
 
-# MOCK_MODE True => never call external APIs
-MOCK_MODE = True
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-# Load env vars but ignore them in mock mode
-API_KEY = os.getenv("LLM_API_KEY", "").strip()
-API_URL = os.getenv("API_URL", "").strip()
-MODEL = os.getenv("MODEL", "mock-model").strip()
+@app.route('/api/respond', methods=['POST'])
+def respond():
+    data = request.get_json(silent=True) or {}
+    prompt = data.get('prompt', '')
+    if not isinstance(prompt, str) or not prompt.strip():
+        return jsonify({'error': 'prompt required'}), 400
 
-if MOCK_MODE:
-    logging.info("Running in MOCK_MODE: external API calls are disabled.")
-else:
-    if not API_KEY or not API_URL:
-        raise RuntimeError("Real API mode enabled but LLM_API_KEY or API_URL is missing.")
+    def gen(text: str):
+        out = text.upper()
+        words = out.split()
+        for w in words:
+            for ch in w:
+                yield f"data: {json.dumps({'token': ch})}\n\n"
+                time.sleep(0.03)
+            yield f"data: {json.dumps({'token': ' '})}\n\n"
+            time.sleep(0.06)
+        time.sleep(0.3)
+        yield "data: [DONE]\n\n"
 
-CONVERSATIONS = {"default": [
-    {"role": "system", "content": "You are KummeraAI, a helpful assistant (mock mode)."}
-]}
+    return Response(gen(prompt), mimetype='text/event-stream')
 
-def mock_llm_reply(messages):
-    last = ""
-    for m in reversed(messages):
-        if m.get("role") == "user":
-            last = m.get("content", "")
-            break
-    time.sleep(0.2)
-    if not last:
-        return "Hello — I'm KummeraAI (mock). Ask me anything!"
-    if "help" in last.lower():
-        return "Sure — explain what you need help with, and I'll pretend to assist."
-    return f"(mock) I heard: \"{last}\" — here's a friendly reply from KummeraAI."
-
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-@app.route("/chat", methods=["POST"])
-def chat():
-    body = request.get_json(force=True)
-    user_msg = body.get("message", "").strip()
-    if not user_msg:
-        return jsonify({"error": "empty message"}), 400
-
-    convo = CONVERSATIONS["default"]
-    convo.append({"role": "user", "content": user_msg})
-
-    if MOCK_MODE:
-        reply = mock_llm_reply(convo)
-    else:
-        # Safety: this block will only run if MOCK_MODE is False and API_KEY/API_URL present
-        # Implement your real call_llm here when you decide to use a real model.
-        reply = "(real API mode placeholder)"
-
-    convo.append({"role": "assistant", "content": reply})
-    if len(convo) > 40:
-        CONVERSATIONS["default"] = [convo[0]] + convo[-38:]
-    return jsonify({"reply": reply})
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5001))
+    app.run(host='127.0.0.1', port=port, debug=True, threaded=True)
